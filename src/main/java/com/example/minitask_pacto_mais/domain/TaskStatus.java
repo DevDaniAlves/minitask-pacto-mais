@@ -1,4 +1,6 @@
 package com.example.minitask_pacto_mais.domain;
+import java.util.EnumSet;
+import java.util.Set;
 
 public enum TaskStatus {
     PLANNING,
