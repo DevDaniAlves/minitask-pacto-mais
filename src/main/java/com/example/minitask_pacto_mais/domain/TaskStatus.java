@@ -17,9 +17,6 @@ public enum TaskStatus {
                 || this == IN_REVIEW
                 || this == COMPLETED;
     }
-    /** Movimentações permitidas entre os status. */
-
-
     public Set<TaskStatus> allowedTransitions() {
         return switch (this) {
             case PLANNING -> EnumSet.of(ASSIGNED, CANCELLED);

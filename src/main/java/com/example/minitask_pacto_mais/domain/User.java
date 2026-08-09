@@ -14,8 +14,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import java.time.LocalDateTime;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -37,6 +37,13 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(unique = true)
+    private String phone;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean phoneVerified = false;
+
     @Column(nullable = false)
     private String passwordHash;
 
@@ -48,19 +55,19 @@ public class User {
     @Builder.Default
     private boolean twoFactorEnabled = false;
 
-    @Column()
-    private String twoFactorSecret;
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean twoFactorPending = false;
 
-    @Column()
-    private String resetPasswordToken;
+    private String otpHash;
 
-    @Column()
+    private LocalDateTime otpExpiresAt;
+
+    private String resetPasswordTokenHash;
+
     private LocalDateTime resetPasswordTokenExpiresAt;
 
-    @Column()
-    private LocalDateTime twoFactorExpiresAt;
-
-    @Column()
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
@@ -69,5 +76,4 @@ public class User {
             createdAt = LocalDateTime.now();
         }
     }
-
 }

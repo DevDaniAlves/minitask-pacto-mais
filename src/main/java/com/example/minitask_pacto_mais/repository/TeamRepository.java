@@ -13,5 +13,7 @@ import org.springframework.data.domain.Pageable;
 public interface TeamRepository extends JpaRepository<Team, UUID> {
 
     Page<Team> findByName(String name, Pageable pageable);
+
+    
     
 }
