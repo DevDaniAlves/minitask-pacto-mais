@@ -31,5 +31,18 @@ public enum TaskStatus {
     public boolean canTransitionTo(TaskStatus next) {
         return allowedTransitions().contains(next);
     }
+
+    public String labelPt() {
+        return switch (this) {
+            case PLANNING -> "Planejamento";
+            case ASSIGNED -> "Atribuída";
+            case IN_PROGRESS -> "Em progresso";
+            case AWAITING_REVIEW -> "Aguardando review";
+            case IN_REVIEW -> "Em review";
+            case REJECTED -> "Rejeitada";
+            case COMPLETED -> "Concluída";
+            case CANCELLED -> "Cancelada";
+        };
+    }
 }
 

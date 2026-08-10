@@ -8,9 +8,13 @@ public record EvolutionProperties(
         String apiKey,
         String instance
 ) {
-    public boolean isConfigured() {
+    public boolean isServerConfigured() {
         return baseUrl != null && !baseUrl.isBlank()
-                && apiKey != null && !apiKey.isBlank()
+                && apiKey != null && !apiKey.isBlank();
+    }
+
+    public boolean isConfigured() {
+        return isServerConfigured()
                 && instance != null && !instance.isBlank();
     }
 }

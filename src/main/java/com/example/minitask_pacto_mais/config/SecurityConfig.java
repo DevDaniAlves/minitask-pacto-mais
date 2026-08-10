@@ -1,5 +1,7 @@
 package com.example.minitask_pacto_mais.config;
 
+import com.example.minitask_pacto_mais.config.FrontendProperties;
+import com.example.minitask_pacto_mais.config.N8nProperties;
 import com.example.minitask_pacto_mais.notification.BrevoProperties;
 import com.example.minitask_pacto_mais.notification.EvolutionProperties;
 import com.example.minitask_pacto_mais.security.BotAuthenticationFilter;
@@ -33,7 +35,9 @@ import java.util.List;
         CorsProperties.class,
         BrevoProperties.class,
         EvolutionProperties.class,
-        BotProperties.class
+        BotProperties.class,
+        FrontendProperties.class,
+        N8nProperties.class
 })
 public class SecurityConfig {
 

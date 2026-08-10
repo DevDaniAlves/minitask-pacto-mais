@@ -35,7 +35,8 @@ public final class AuthDtos {
             boolean phoneVerified,
             Role role,
             boolean twoFactorEnabled,
-            boolean needsPhoneVerification
+            boolean needsPhoneVerification,
+            boolean mustChangePassword
     ) {}
 
     public record LoginChallengeResponse(
@@ -64,4 +65,20 @@ public final class AuthDtos {
     ) {}
 
     public record MessageResponse(String message, String deliveryChannel) {}
+
+    public record AdminCreateUserRequest(
+            @NotBlank String name,
+            @NotBlank @Email String email,
+            @NotBlank String phone,
+            @NotNull Role role,
+            UUID teamId
+    ) {}
+
+    public record AdminCreateUserResponse(
+            UUID userId,
+            String email,
+            String phone,
+            String message,
+            String deliveryChannel
+    ) {}
 }

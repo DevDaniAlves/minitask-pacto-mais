@@ -47,6 +47,7 @@ public class PasswordResetService {
 
         otpService.verifyResetOtp(user, request.code());
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        user.setMustChangePassword(false);
         userRepository.save(user);
     }
 }

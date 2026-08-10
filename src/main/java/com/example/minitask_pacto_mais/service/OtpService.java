@@ -1,5 +1,6 @@
 package com.example.minitask_pacto_mais.service;
 
+import com.example.minitask_pacto_mais.config.FrontendProperties;
 import com.example.minitask_pacto_mais.domain.User;
 import com.example.minitask_pacto_mais.notification.OtpChannel;
 import com.example.minitask_pacto_mais.notification.OtpSender;
@@ -27,6 +28,7 @@ public class OtpService {
 
     private final UserRepository userRepository;
     private final OtpSender otpSender;
+    private final FrontendProperties frontendProperties;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional
@@ -73,6 +75,36 @@ public class OtpService {
                 resetMessage,
                 null
         );
+        return OtpChannel.EMAIL;
+    }
+
+    @Transactional
+    public OtpChannel issueAccountSetupOtp(User user) {
+        String code = generateCode();
+        user.setResetPasswordTokenHash(hash(code));
+        user.setResetPasswordTokenExpiresAt(LocalDateTime.now().plusMinutes(TTL_MINUTES));
+        user.setMustChangePassword(true);
+        userRepository.save(user);
+
+        String link = frontendProperties.baseUrlOrDefault()
+                + "/set-password?email="
+                + java.net.URLEncoder.encode(user.getEmail(), java.nio.charset.StandardCharsets.UTF_8)
+                + "&code=" + code;
+        String message = "Bem-vindo ao Mini Task! Abra o link para definir sua senha: "
+                + link
+                + " (válido por " + TTL_MINUTES + " min).";
+
+        if (user.getPhone() != null && !user.getPhone().isBlank()) {
+            try {
+                otpSender.send(OtpChannel.WHATSAPP, user.getPhone(), message, user.getEmail());
+                return OtpChannel.WHATSAPP;
+            } catch (Exception ex) {
+                otpSender.send(OtpChannel.EMAIL, user.getEmail(), message, null);
+                return OtpChannel.EMAIL;
+            }
+        }
+
+        otpSender.send(OtpChannel.EMAIL, user.getEmail(), message, null);
         return OtpChannel.EMAIL;
     }
 

@@ -152,7 +152,8 @@ public class AuthService {
                 user.isPhoneVerified(),
                 user.getRole(),
                 user.isTwoFactorEnabled(),
-                needsPhoneVerification
+                needsPhoneVerification,
+                user.isMustChangePassword()
         );
     }
 }

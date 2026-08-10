@@ -30,21 +30,21 @@ public class WhatsAppNotifier {
         }
         sendSafe(
                 assignee,
-                "Task vinculada a você: \"" + task.getTitle() + "\" (" + task.getStatus().name() + ")"
+                "Task vinculada a você: \"" + task.getTitle() + "\" (" + task.getStatus().labelPt() + ")"
         );
     }
 
     public void notifyAwaitingApproval(Task task) {
         List<User> admins = userRepository.findByRoleAndPhoneVerifiedTrue(Role.ADMIN);
         String message = "Task aguardando aprovação: \"" + task.getTitle()
-                + "\" [" + task.getId() + "] status=" + task.getStatus().name();
+                + "\" [" + task.getId() + "] status=" + task.getStatus().labelPt();
         for (User admin : admins) {
             sendSafe(admin, message);
         }
     }
 
     public void notifyTaskEvaluated(Task task) {
-        String message = "Task avaliada (" + task.getStatus().name() + "): \"" + task.getTitle() + "\"";
+        String message = "Task avaliada (" + task.getStatus().labelPt() + "): \"" + task.getTitle() + "\"";
         if (task.getRating() != null) {
             message += " nota=" + task.getRating();
         }
@@ -65,7 +65,7 @@ public class WhatsAppNotifier {
         if (user == null || user.getPhone() == null || user.getPhone().isBlank()) {
             return;
         }
-        if (!evolutionProperties.isConfigured()) {
+        if (!evolutionProperties.isServerConfigured()) {
             log.info("[WHATSAPP-DEV] to={} message={}", user.getPhone(), message);
             return;
         }

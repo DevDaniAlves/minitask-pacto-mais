@@ -90,7 +90,13 @@ public class TaskService {
         AuthenticatedUser current = SecurityUtils.currentUser();
         accessService.ensureCanAccessTeam(current, board.getTeam());
 
-        List<TaskResponse> tasks = taskRepository.findByBoardIdDetailed(boardId).stream()
+        UUID onlyMine = current.isAdmin() ? null : current.getId();
+        List<TaskResponse> tasks = taskRepository.findForKanban(
+                        null,
+                        boardId,
+                        onlyMine,
+                        accessService.memberScopeOrNull(current)
+                ).stream()
                 .map(this::toResponse)
                 .toList();
         return buildKanban(board, tasks);
@@ -102,9 +108,11 @@ public class TaskService {
         if (teamId != null) {
             accessService.ensureCanAccessTeamId(current, teamId);
         }
+        UUID onlyMine = current.isAdmin() ? null : current.getId();
         List<Task> tasks = taskRepository.findForKanban(
                 teamId,
                 null,
+                onlyMine,
                 accessService.memberScopeOrNull(current));
         Map<UUID, List<Task>> byBoard = tasks.stream()
                 .collect(Collectors.groupingBy(t -> t.getBoard().getId()));

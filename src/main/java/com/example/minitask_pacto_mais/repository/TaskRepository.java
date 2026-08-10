@@ -113,6 +113,7 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
             LEFT JOIN FETCH t.createdBy
             WHERE (:teamId IS NULL OR team.id = :teamId)
               AND (:boardId IS NULL OR b.id = :boardId)
+              AND (:assigneeId IS NULL OR t.assignee.id = :assigneeId)
               AND (:memberUserId IS NULL OR EXISTS (
                     SELECT 1 FROM TeamMember tm
                     WHERE tm.team = team
@@ -124,6 +125,7 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
     List<Task> findForKanban(
             @Param("teamId") UUID teamId,
             @Param("boardId") UUID boardId,
+            @Param("assigneeId") UUID assigneeId,
             @Param("memberUserId") UUID memberUserId
     );
 

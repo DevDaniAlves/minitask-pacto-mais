@@ -29,7 +29,7 @@ public class CompositeOtpSender implements OtpSender {
 
     private void sendWhatsAppWithEmailFallback(String phone, String message, String emailFallback) {
         try {
-            if (evolutionProperties.isConfigured()) {
+            if (evolutionProperties.isServerConfigured()) {
                 evolutionOtpSender.sendWhatsApp(phone, message);
                 return;
             }
