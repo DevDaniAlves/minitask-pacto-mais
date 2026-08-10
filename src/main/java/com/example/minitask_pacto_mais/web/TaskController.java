@@ -2,8 +2,12 @@ package com.example.minitask_pacto_mais.web;
 
 import com.example.minitask_pacto_mais.domain.Priority;
 import com.example.minitask_pacto_mais.domain.TaskStatus;
+import com.example.minitask_pacto_mais.service.CommentService;
 import com.example.minitask_pacto_mais.service.TaskService;
+import com.example.minitask_pacto_mais.web.dtos.CommentDtos.CommentRequest;
+import com.example.minitask_pacto_mais.web.dtos.CommentDtos.CommentResponse;
 import com.example.minitask_pacto_mais.web.dtos.TaskDtos.EvaluationRequest;
+import com.example.minitask_pacto_mais.web.dtos.TaskDtos.KanbanResponse;
 import com.example.minitask_pacto_mais.web.dtos.TaskDtos.PageResponse;
 import com.example.minitask_pacto_mais.web.dtos.TaskDtos.StatusUpdateRequest;
 import com.example.minitask_pacto_mais.web.dtos.TaskDtos.TaskRequest;
@@ -24,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -32,6 +37,7 @@ import java.util.UUID;
 public class TaskController {
 
     private final TaskService taskService;
+    private final CommentService commentService;
 
     @GetMapping
     public PageResponse<TaskResponse> search(
@@ -44,6 +50,11 @@ public class TaskController {
             @RequestParam(defaultValue = "20") int size
     ) {
         return taskService.search(status, priority, assigneeId, teamId, boardId, page, size);
+    }
+
+    @GetMapping("/kanban")
+    public List<KanbanResponse> kanbanOverview(@RequestParam(required = false) UUID teamId) {
+        return taskService.kanbanOverview(teamId);
     }
 
     @GetMapping("/{id}")
@@ -86,5 +97,19 @@ public class TaskController {
             @Valid @RequestBody EvaluationRequest request
     ) {
         return taskService.evaluate(id, request);
+    }
+
+    @GetMapping("/{id}/comments")
+    public List<CommentResponse> listComments(@PathVariable UUID id) {
+        return commentService.listByTask(id);
+    }
+
+    @PostMapping("/{id}/comments")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CommentResponse createComment(
+            @PathVariable UUID id,
+            @Valid @RequestBody CommentRequest request
+    ) {
+        return commentService.create(id, request);
     }
 }

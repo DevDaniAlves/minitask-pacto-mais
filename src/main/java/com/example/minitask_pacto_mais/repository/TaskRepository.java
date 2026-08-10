@@ -104,4 +104,37 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
             @Param("title") String title,
             @Param("memberUserId") UUID memberUserId
     );
+
+    @Query("""
+            SELECT t FROM Task t
+            JOIN FETCH t.board b
+            JOIN FETCH b.team team
+            LEFT JOIN FETCH t.assignee
+            LEFT JOIN FETCH t.createdBy
+            WHERE (:teamId IS NULL OR team.id = :teamId)
+              AND (:boardId IS NULL OR b.id = :boardId)
+              AND (:memberUserId IS NULL OR EXISTS (
+                    SELECT 1 FROM TeamMember tm
+                    WHERE tm.team = team
+                      AND tm.user.id = :memberUserId
+                      AND tm.isEnabled = true
+              ))
+            ORDER BY t.createdAt DESC
+            """)
+    List<Task> findForKanban(
+            @Param("teamId") UUID teamId,
+            @Param("boardId") UUID boardId,
+            @Param("memberUserId") UUID memberUserId
+    );
+
+    @Query("""
+            SELECT t FROM Task t
+            JOIN FETCH t.board b
+            JOIN FETCH b.team team
+            LEFT JOIN FETCH t.assignee
+            LEFT JOIN FETCH t.createdBy
+            WHERE b.id = :boardId
+            ORDER BY t.createdAt ASC
+            """)
+    List<Task> findByBoardIdDetailed(@Param("boardId") UUID boardId);
 }

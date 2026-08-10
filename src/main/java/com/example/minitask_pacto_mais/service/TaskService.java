@@ -14,11 +14,13 @@ import com.example.minitask_pacto_mais.security.AuthenticatedUser;
 import com.example.minitask_pacto_mais.security.SecurityUtils;
 import com.example.minitask_pacto_mais.web.dtos.TaskDtos.EvaluationOutcome;
 import com.example.minitask_pacto_mais.web.dtos.TaskDtos.EvaluationRequest;
+import com.example.minitask_pacto_mais.web.dtos.TaskDtos.KanbanResponse;
 import com.example.minitask_pacto_mais.web.dtos.TaskDtos.PageResponse;
 import com.example.minitask_pacto_mais.web.dtos.TaskDtos.StatusUpdateRequest;
 import com.example.minitask_pacto_mais.web.dtos.TaskDtos.TaskRequest;
 import com.example.minitask_pacto_mais.web.dtos.TaskDtos.TaskResponse;
 import com.example.minitask_pacto_mais.web.error.BusinessException;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -28,9 +30,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -50,8 +55,7 @@ public class TaskService {
             UUID teamId,
             UUID boardId,
             int page,
-            int size
-    ) {
+            int size) {
         AuthenticatedUser current = SecurityUtils.currentUser();
         Page<Task> result = taskRepository.search(
                 status,
@@ -60,8 +64,7 @@ public class TaskService {
                 teamId,
                 boardId,
                 accessService.memberScopeOrNull(current),
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
-        );
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
         List<TaskResponse> content = result.getContent().stream()
                 .map(this::toResponse)
                 .toList();
@@ -70,8 +73,7 @@ public class TaskService {
                 result.getNumber(),
                 result.getSize(),
                 result.getTotalElements(),
-                result.getTotalPages()
-        );
+                result.getTotalPages());
     }
 
     @Transactional(readOnly = true)
@@ -79,6 +81,42 @@ public class TaskService {
         Task task = findTask(id);
         accessService.ensureCanAccessTeam(SecurityUtils.currentUser(), task.getBoard().getTeam());
         return toResponse(task);
+    }
+
+    @Transactional(readOnly = true)
+    public KanbanResponse kanbanByBoard(UUID boardId) {
+        Board board = boardRepository.findByIdWithTeam(boardId)
+                .orElseThrow(() -> new BusinessException("Quadro não encontrado", HttpStatus.NOT_FOUND));
+        AuthenticatedUser current = SecurityUtils.currentUser();
+        accessService.ensureCanAccessTeam(current, board.getTeam());
+
+        List<TaskResponse> tasks = taskRepository.findByBoardIdDetailed(boardId).stream()
+                .map(this::toResponse)
+                .toList();
+        return buildKanban(board, tasks);
+    }
+
+    @Transactional(readOnly = true)
+    public List<KanbanResponse> kanbanOverview(UUID teamId) {
+        AuthenticatedUser current = SecurityUtils.currentUser();
+        if (teamId != null) {
+            accessService.ensureCanAccessTeamId(current, teamId);
+        }
+        List<Task> tasks = taskRepository.findForKanban(
+                teamId,
+                null,
+                accessService.memberScopeOrNull(current));
+        Map<UUID, List<Task>> byBoard = tasks.stream()
+                .collect(Collectors.groupingBy(t -> t.getBoard().getId()));
+        return byBoard.values().stream()
+                .map(boardTasks -> {
+                    Board board = boardTasks.get(0).getBoard();
+                    List<TaskResponse> responses = boardTasks.stream()
+                            .map(this::toResponse)
+                            .toList();
+                    return buildKanban(board, responses);
+                })
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -179,14 +217,12 @@ public class TaskService {
         if (!from.canTransitionTo(next)) {
             throw new BusinessException(
                     "Transição inválida de " + from + " para " + next,
-                    HttpStatus.BAD_REQUEST
-            );
+                    HttpStatus.BAD_REQUEST);
         }
         if (next.requiresAssignee() && task.getAssignee() == null) {
             throw new BusinessException(
                     "Responsável é obrigatório para o status " + next,
-                    HttpStatus.BAD_REQUEST
-            );
+                    HttpStatus.BAD_REQUEST);
         }
 
         applyStatusChange(task, from, next, current.getId());
@@ -210,8 +246,7 @@ public class TaskService {
         if (task.getStatus() != TaskStatus.IN_REVIEW) {
             throw new BusinessException(
                     "Tarefa precisa estar IN_REVIEW para ser avaliada",
-                    HttpStatus.BAD_REQUEST
-            );
+                    HttpStatus.BAD_REQUEST);
         }
         if (task.getAssignee() == null) {
             throw new BusinessException("Tarefa precisa de responsável para ser avaliada", HttpStatus.BAD_REQUEST);
@@ -257,6 +292,20 @@ public class TaskService {
                 .orElseThrow(() -> new BusinessException("Tarefa não encontrada", HttpStatus.NOT_FOUND));
     }
 
+    private KanbanResponse buildKanban(Board board, List<TaskResponse> tasks) {
+        Map<TaskStatus, List<TaskResponse>> columns = new EnumMap<>(TaskStatus.class);
+        for (TaskStatus status : TaskStatus.values()) {
+            columns.put(status, tasks.stream().filter(t -> t.status() == status).toList());
+        }
+        return new KanbanResponse(
+                board.getId(),
+                board.getName(),
+                board.getTeam().getId(),
+                board.getTeam().getName(),
+                board.getTeam().getColor(),
+                columns);
+    }
+
     public TaskResponse toResponse(Task task) {
         User assignee = task.getAssignee();
         User createdBy = task.getCreatedBy();
@@ -279,7 +328,6 @@ public class TaskService {
                 task.getDueDate(),
                 task.getUpdatedAt(),
                 task.getRating(),
-                task.getRatingDescription()
-        );
+                task.getRatingDescription());
     }
 }

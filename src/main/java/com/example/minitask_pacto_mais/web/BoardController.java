@@ -1,8 +1,10 @@
 package com.example.minitask_pacto_mais.web;
 
 import com.example.minitask_pacto_mais.service.BoardService;
+import com.example.minitask_pacto_mais.service.TaskService;
 import com.example.minitask_pacto_mais.web.dtos.BoardDtos.BoardRequest;
 import com.example.minitask_pacto_mais.web.dtos.BoardDtos.BoardResponse;
+import com.example.minitask_pacto_mais.web.dtos.TaskDtos.KanbanResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -27,6 +29,7 @@ import java.util.UUID;
 public class BoardController {
 
     private final BoardService boardService;
+    private final TaskService taskService;
 
     @GetMapping
     public List<BoardResponse> list(@RequestParam(required = false) UUID teamId) {
@@ -36,6 +39,11 @@ public class BoardController {
     @GetMapping("/{id}")
     public BoardResponse get(@PathVariable UUID id) {
         return boardService.get(id);
+    }
+
+    @GetMapping("/{id}/kanban")
+    public KanbanResponse kanban(@PathVariable UUID id) {
+        return taskService.kanbanByBoard(id);
     }
 
     @PostMapping

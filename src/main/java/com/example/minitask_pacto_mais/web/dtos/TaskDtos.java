@@ -10,6 +10,7 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public final class TaskDtos {
@@ -69,4 +70,13 @@ public final class TaskDtos {
         APPROVED,
         REJECTED
     }
+
+    public record KanbanResponse(
+            UUID boardId,
+            String boardName,
+            UUID teamId,
+            String teamName,
+            String teamColor,
+            Map<TaskStatus, List<TaskResponse>> columns
+    ) {}
 }
