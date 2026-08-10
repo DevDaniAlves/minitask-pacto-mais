@@ -2,6 +2,7 @@ package com.example.minitask_pacto_mais.service;
 
 import com.example.minitask_pacto_mais.domain.Priority;
 import com.example.minitask_pacto_mais.domain.Task;
+import com.example.minitask_pacto_mais.domain.TaskStatus;
 import com.example.minitask_pacto_mais.domain.TeamMember;
 import com.example.minitask_pacto_mais.domain.User;
 import com.example.minitask_pacto_mais.repository.BoardRepository;
@@ -84,18 +85,23 @@ public class BotService {
         }
         if (tasks.size() == 1) {
             TaskDetailResponse detail = toDetail(tasks.get(0));
-            String next = detail.allowedNextStatuses().isEmpty()
+            String next = detail.allowedNextStatusLabels().isEmpty()
                     ? "sem próximos status"
-                    : detail.allowedNextStatuses().toString();
+                    : detail.allowedNextStatusLabels().toString();
             String hint = "Encontrei a task \"" + detail.title() + "\" (status "
-                    + detail.currentStatus() + "). Próximos status: " + next
+                    + detail.currentStatusLabel() + "). Próximos status: " + next
                     + ". Confirme se é essa (sim/não) antes de alterar.";
             return new TaskLookupResponse(false, detail, List.of(), hint);
         }
         List<TaskLookupItem> matches = new ArrayList<>();
         for (int i = 0; i < tasks.size(); i++) {
             Task t = tasks.get(i);
-            matches.add(new TaskLookupItem(i + 1, t.getId(), t.getTitle(), t.getStatus()));
+            matches.add(new TaskLookupItem(
+                    i + 1,
+                    t.getId(),
+                    t.getTitle(),
+                    t.getStatus(),
+                    t.getStatus().labelPt()));
         }
         String hint = "Encontrei " + matches.size()
                 + " tasks. Peça o índice (1.." + matches.size()
@@ -152,8 +158,8 @@ public class BotService {
         if (request.assigneeId() != null) {
             return request.assigneeId();
         }
-        if (request.assigneeIndex() == null) {
-            throw new BusinessException("Informe assigneeId ou assigneeIndex", HttpStatus.BAD_REQUEST);
+        if (request.assigneeIndex() == null || request.assigneeIndex() < 1) {
+            return null;
         }
         List<IndexedUser> users = listUsersForBoard(boardId);
         return pickByIndex(users, request.assigneeIndex(), "usuário").id();
@@ -170,12 +176,16 @@ public class BotService {
     }
 
     private TaskDetailResponse toDetail(Task task) {
+        List<TaskStatus> next = List.copyOf(task.getStatus().allowedTransitions());
+        List<String> nextLabels = next.stream().map(TaskStatus::labelPt).toList();
         return new TaskDetailResponse(
                 task.getId(),
                 task.getTitle(),
                 task.getDescription(),
                 task.getStatus(),
-                List.copyOf(task.getStatus().allowedTransitions()),
+                task.getStatus().labelPt(),
+                next,
+                nextLabels,
                 task.getPriority(),
                 task.getBoard().getId(),
                 task.getBoard().getName(),

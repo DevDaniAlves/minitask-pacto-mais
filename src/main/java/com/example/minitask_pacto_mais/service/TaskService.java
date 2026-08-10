@@ -29,6 +29,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.Normalizer;
+
 import java.time.LocalDateTime;
 import java.util.EnumMap;
 import java.util.List;
@@ -138,7 +140,7 @@ public class TaskService {
     public List<Task> lookupByQuery(String q) {
         AuthenticatedUser current = SecurityUtils.currentUser();
         UUID assigneeScope = current.isAdmin() ? null : current.getId();
-        String query = q == null ? "" : q.trim();
+        String query = foldAccents(q == null ? "" : q.trim());
         if (query.isBlank()) {
             throw new BusinessException("Informe id ou nome da task", HttpStatus.BAD_REQUEST);
         }
@@ -153,6 +155,10 @@ public class TaskService {
         }
     }
 
+    private static String foldAccents(String value) {
+        return Normalizer.normalize(value, Normalizer.Form.NFD).replaceAll("\\p{M}+", "");
+    }
+
     @Transactional
     public TaskResponse create(TaskRequest request) {
         Board board = boardRepository.findByIdWithTeam(request.boardId())
@@ -162,6 +168,7 @@ public class TaskService {
         User creator = userRepository.findById(SecurityUtils.currentUser().getId())
                 .orElseThrow(() -> new BusinessException("Usuário não encontrado", HttpStatus.NOT_FOUND));
         User assignee = resolveAssignee(request.assigneeId());
+        TaskStatus initialStatus = assignee != null ? TaskStatus.ASSIGNED : TaskStatus.PLANNING;
 
         Task task = Task.builder()
                 .title(request.title().trim())
@@ -171,11 +178,11 @@ public class TaskService {
                 .assignee(assignee)
                 .createdBy(creator)
                 .dueDate(request.dueDate())
-                .status(TaskStatus.PLANNING)
+                .status(initialStatus)
                 .build();
 
         taskRepository.save(task);
-        if (assignee != null) {
+        if (initialStatus == TaskStatus.ASSIGNED) {
             whatsAppNotifier.notifyTaskAssigned(task);
         }
         return toResponse(task);
@@ -190,6 +197,7 @@ public class TaskService {
                 .orElseThrow(() -> new BusinessException("Quadro não encontrado", HttpStatus.NOT_FOUND));
 
         UUID previousAssigneeId = task.getAssignee() != null ? task.getAssignee().getId() : null;
+        TaskStatus previousStatus = task.getStatus();
         User assignee = resolveAssignee(request.assigneeId());
 
         task.setTitle(request.title().trim());
@@ -200,8 +208,18 @@ public class TaskService {
         task.setDueDate(request.dueDate());
         task.setUpdatedAt(LocalDateTime.now());
 
+        if (assignee == null && task.getStatus() == TaskStatus.ASSIGNED) {
+            task.setStatus(TaskStatus.PLANNING);
+        } else if (assignee != null && task.getStatus() == TaskStatus.PLANNING) {
+            task.setStatus(TaskStatus.ASSIGNED);
+        }
+
         UUID newAssigneeId = assignee != null ? assignee.getId() : null;
-        if (assignee != null && !Objects.equals(previousAssigneeId, newAssigneeId)) {
+        boolean becameAssigned = previousStatus != TaskStatus.ASSIGNED && task.getStatus() == TaskStatus.ASSIGNED;
+        boolean assigneeChangedWhileAssigned = task.getStatus() == TaskStatus.ASSIGNED
+                && assignee != null
+                && !Objects.equals(previousAssigneeId, newAssigneeId);
+        if (becameAssigned || assigneeChangedWhileAssigned) {
             whatsAppNotifier.notifyTaskAssigned(task);
         }
         return toResponse(task);
@@ -235,6 +253,9 @@ public class TaskService {
 
         applyStatusChange(task, from, next, current.getId());
 
+        if (next == TaskStatus.ASSIGNED) {
+            whatsAppNotifier.notifyTaskAssigned(task);
+        }
         if (next == TaskStatus.AWAITING_REVIEW) {
             whatsAppNotifier.notifyAwaitingApproval(task);
         }

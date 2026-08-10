@@ -41,7 +41,8 @@ public final class BotDtos {
             int index,
             UUID id,
             String title,
-            TaskStatus status
+            TaskStatus status,
+            String statusLabel
     ) {}
 
     public record TaskLookupResponse(
@@ -56,7 +57,9 @@ public final class BotDtos {
             String title,
             String description,
             TaskStatus currentStatus,
+            String currentStatusLabel,
             List<TaskStatus> allowedNextStatuses,
+            List<String> allowedNextStatusLabels,
             Priority priority,
             UUID boardId,
             String boardName,

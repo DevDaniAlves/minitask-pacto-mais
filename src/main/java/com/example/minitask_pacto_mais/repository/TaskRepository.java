@@ -91,7 +91,10 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
             JOIN FETCH b.team team
             LEFT JOIN FETCH t.assignee
             LEFT JOIN FETCH t.createdBy
-            WHERE LOWER(t.title) LIKE LOWER(CONCAT('%', :title, '%'))
+            WHERE LOWER(FUNCTION('translate', t.title,
+                  'áàâãäÁÀÂÃÄéèêëÉÈÊËíìîïÍÌÎÏóòôõöÓÒÔÕÖúùûüÚÙÛÜçÇ',
+                  'aaaaaAAAAAeeeeEEEEiiiiIIIIoooooOOOOOuuuuUUUUcC'))
+                  LIKE LOWER(CONCAT('%', :title, '%'))
               AND (:assigneeUserId IS NULL OR t.assignee.id = :assigneeUserId)
             ORDER BY t.createdAt DESC
             """)
