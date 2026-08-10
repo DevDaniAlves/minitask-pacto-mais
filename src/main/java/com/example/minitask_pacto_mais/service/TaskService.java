@@ -137,7 +137,7 @@ public class TaskService {
     @Transactional(readOnly = true)
     public List<Task> lookupByQuery(String q) {
         AuthenticatedUser current = SecurityUtils.currentUser();
-        UUID scope = accessService.memberScopeOrNull(current);
+        UUID assigneeScope = current.isAdmin() ? null : current.getId();
         String query = q == null ? "" : q.trim();
         if (query.isBlank()) {
             throw new BusinessException("Informe id ou nome da task", HttpStatus.BAD_REQUEST);
@@ -146,10 +146,10 @@ public class TaskService {
         try {
             UUID id = UUID.fromString(query);
             Task task = findTask(id);
-            accessService.ensureCanAccessTeam(current, task.getBoard().getTeam());
+            ensureCanActOnOwnTask(current, task);
             return List.of(task);
         } catch (IllegalArgumentException ignored) {
-            return taskRepository.findByTitleContainingIgnoreCaseScoped(query, scope);
+            return taskRepository.findByTitleContainingIgnoreCaseScoped(query, assigneeScope);
         }
     }
 
@@ -218,7 +218,7 @@ public class TaskService {
     public TaskResponse changeStatus(UUID id, StatusUpdateRequest request) {
         AuthenticatedUser current = SecurityUtils.currentUser();
         Task task = findTask(id);
-        accessService.ensureCanAccessTeam(current, task.getBoard().getTeam());
+        ensureCanActOnOwnTask(current, task);
 
         TaskStatus next = request.status();
         TaskStatus from = task.getStatus();
@@ -285,6 +285,16 @@ public class TaskService {
         task.getStatusLogs().add(log);
         task.setStatus(to);
         task.setUpdatedAt(LocalDateTime.now());
+    }
+
+    private void ensureCanActOnOwnTask(AuthenticatedUser current, Task task) {
+        accessService.ensureCanAccessTeam(current, task.getBoard().getTeam());
+        if (current.isAdmin()) {
+            return;
+        }
+        if (task.getAssignee() == null || !task.getAssignee().getId().equals(current.getId())) {
+            throw new BusinessException("Você só pode alterar suas próprias tasks", HttpStatus.FORBIDDEN);
+        }
     }
 
     private User resolveAssignee(UUID assigneeId) {

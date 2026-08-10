@@ -47,7 +47,8 @@ public final class BotDtos {
     public record TaskLookupResponse(
             boolean multiple,
             TaskDetailResponse single,
-            List<TaskLookupItem> matches
+            List<TaskLookupItem> matches,
+            String hint
     ) {}
 
     public record TaskDetailResponse(

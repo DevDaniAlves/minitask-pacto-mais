@@ -56,12 +56,16 @@ public class EvolutionApiClient {
 
     public void setMessagesUpsertWebhook(String instanceName, String webhookUrl) {
         ensureServer();
+        Map<String, Object> webhook = new LinkedHashMap<>();
+        webhook.put("enabled", true);
+        webhook.put("url", webhookUrl);
+        webhook.put("webhookByEvents", false);
+        webhook.put("byEvents", false);
+        webhook.put("webhookBase64", false);
+        webhook.put("base64", false);
+        webhook.put("events", List.of("MESSAGES_UPSERT"));
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("enabled", true);
-        body.put("url", webhookUrl);
-        body.put("webhookByEvents", false);
-        body.put("webhookBase64", false);
-        body.put("events", List.of("MESSAGES_UPSERT"));
+        body.put("webhook", webhook);
         try {
             post("/webhook/set/" + encode(instanceName), body);
             log.info("Webhook n8n configurado na Evolution instance={} url={}", instanceName, webhookUrl);

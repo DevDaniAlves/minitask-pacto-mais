@@ -55,13 +55,16 @@ public class BotAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String rawPhone = request.getHeader(PHONE_HEADER);
-        String phone = PhoneNormalizer.normalize(rawPhone, DEFAULT_COUNTRY);
-        if (phone == null) {
+        var candidates = PhoneNormalizer.lookupCandidates(rawPhone, DEFAULT_COUNTRY);
+        if (candidates.isEmpty()) {
             writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "Telefone WhatsApp ausente ou inválido");
             return;
         }
 
-        var userOpt = userRepository.findByPhone(phone);
+        var userOpt = candidates.stream()
+                .map(userRepository::findByPhone)
+                .flatMap(java.util.Optional::stream)
+                .findFirst();
         if (userOpt.isEmpty()) {
             writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "Usuário não encontrado para este telefone");
             return;

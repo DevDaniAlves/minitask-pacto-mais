@@ -86,23 +86,18 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
     );
 
     @Query("""
-            SELECT t FROM Task t
+            SELECT t from Task t
             JOIN FETCH t.board b
             JOIN FETCH b.team team
             LEFT JOIN FETCH t.assignee
             LEFT JOIN FETCH t.createdBy
             WHERE LOWER(t.title) LIKE LOWER(CONCAT('%', :title, '%'))
-              AND (:memberUserId IS NULL OR EXISTS (
-                    SELECT 1 FROM TeamMember tm
-                    WHERE tm.team = team
-                      AND tm.user.id = :memberUserId
-                      AND tm.isEnabled = true
-              ))
+              AND (:assigneeUserId IS NULL OR t.assignee.id = :assigneeUserId)
             ORDER BY t.createdAt DESC
             """)
     List<Task> findByTitleContainingIgnoreCaseScoped(
             @Param("title") String title,
-            @Param("memberUserId") UUID memberUserId
+            @Param("assigneeUserId") UUID assigneeUserId
     );
 
     @Query("""

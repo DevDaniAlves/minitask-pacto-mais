@@ -83,14 +83,24 @@ public class BotService {
             throw new BusinessException("Nenhuma task encontrada", HttpStatus.NOT_FOUND);
         }
         if (tasks.size() == 1) {
-            return new TaskLookupResponse(false, toDetail(tasks.get(0)), List.of());
+            TaskDetailResponse detail = toDetail(tasks.get(0));
+            String next = detail.allowedNextStatuses().isEmpty()
+                    ? "sem próximos status"
+                    : detail.allowedNextStatuses().toString();
+            String hint = "Encontrei a task \"" + detail.title() + "\" (status "
+                    + detail.currentStatus() + "). Próximos status: " + next
+                    + ". Confirme se é essa (sim/não) antes de alterar.";
+            return new TaskLookupResponse(false, detail, List.of(), hint);
         }
         List<TaskLookupItem> matches = new ArrayList<>();
         for (int i = 0; i < tasks.size(); i++) {
             Task t = tasks.get(i);
             matches.add(new TaskLookupItem(i + 1, t.getId(), t.getTitle(), t.getStatus()));
         }
-        return new TaskLookupResponse(true, null, matches);
+        String hint = "Encontrei " + matches.size()
+                + " tasks. Peça o índice (1.." + matches.size()
+                + ") para confirmar qual alterar.";
+        return new TaskLookupResponse(true, null, matches, hint);
     }
 
     @Transactional(readOnly = true)
