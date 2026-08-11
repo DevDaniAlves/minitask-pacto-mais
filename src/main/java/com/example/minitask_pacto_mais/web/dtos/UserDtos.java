@@ -13,6 +13,13 @@ public final class UserDtos {
             String email,
             String phone,
             Role role,
-            boolean mustChangePassword
+            boolean mustChangePassword,
+            boolean phoneVerified,
+            boolean twoFactorEnabled,
+            boolean twoFactorPending
+    ) {}
+
+    public record UpdateUserPhoneRequest(
+            String phone
     ) {}
 }

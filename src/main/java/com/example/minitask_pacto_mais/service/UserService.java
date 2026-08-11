@@ -35,15 +35,62 @@ public class UserService {
     @Transactional(readOnly = true)
     public List<UserResponse> list() {
         return userRepository.findAll().stream()
-                .map(u -> new UserResponse(
-                        u.getId(),
-                        u.getName(),
-                        u.getEmail(),
-                        u.getPhone(),
-                        u.getRole(),
-                        u.isMustChangePassword()
-                ))
+                .map(this::toResponse)
                 .toList();
+    }
+
+    @Transactional
+    public UserResponse updatePhone(UUID userId, String rawPhone) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado", HttpStatus.NOT_FOUND));
+
+        boolean clearing = rawPhone == null || rawPhone.isBlank();
+        if (clearing) {
+            user.setPhone(null);
+            user.setPhoneVerified(false);
+            clearTwoFactor(user);
+            return toResponse(user);
+        }
+
+        String phone = PhoneNormalizer.normalize(rawPhone, DEFAULT_COUNTRY);
+        if (phone == null) {
+            throw new BusinessException("Telefone inválido", HttpStatus.BAD_REQUEST);
+        }
+
+        userRepository.findByPhone(phone).ifPresent(existing -> {
+            if (!existing.getId().equals(userId)) {
+                throw new BusinessException("Telefone já está em uso", HttpStatus.CONFLICT);
+            }
+        });
+
+        boolean phoneChanged = !phone.equals(user.getPhone());
+        user.setPhone(phone);
+        if (phoneChanged) {
+            user.setPhoneVerified(false);
+            clearTwoFactor(user);
+        }
+        return toResponse(user);
+    }
+
+    private void clearTwoFactor(User user) {
+        user.setTwoFactorEnabled(false);
+        user.setTwoFactorPending(false);
+        user.setOtpHash(null);
+        user.setOtpExpiresAt(null);
+    }
+
+    private UserResponse toResponse(User u) {
+        return new UserResponse(
+                u.getId(),
+                u.getName(),
+                u.getEmail(),
+                u.getPhone(),
+                u.getRole(),
+                u.isMustChangePassword(),
+                u.isPhoneVerified(),
+                u.isTwoFactorEnabled(),
+                u.isTwoFactorPending()
+        );
     }
 
     @Transactional
