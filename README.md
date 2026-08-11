@@ -4,14 +4,6 @@ API Java 21 + Spring Boot. Postgres, JWT, JPA.
 
 ## Rodar
 
-Com Docker (monorepo na raiz):
-
-```bash
-docker compose up --build backend
-```
-
-Local:
-
 ```bash
 cp .env.example .env
 # DB_URL=jdbc:postgresql://localhost:5435/minitask
@@ -22,6 +14,8 @@ Health: http://localhost:8080/api/health
 
 Seed padrão: `admin@demo.com` / `admin123` e `func@demo.com` / `func123`.
 
+Stack Docker (API + front + Postgres + Evolution + n8n) fica no **monorepo** (`docker compose` na raiz), não neste repositório.
+
 ## O que a API cobre
 
 - Auth: login, register, OTP/2FA, reset/set password
@@ -30,8 +24,6 @@ Seed padrão: `admin@demo.com` / `admin123` e `func@demo.com` / `func123`.
 - Perfil: senha, 2FA
 - Admin users: convite, telefone (remover desliga 2FA)
 - WhatsApp (Evolution) e rotas `/api/bot/**` pro n8n
-
-Detalhes de stack e compose estão no README da raiz do monorepo.
 
 ## Testes
 
